@@ -260,23 +260,25 @@ class VLLMModel(LightevalModel):
             # The choice we go for here is to avoid truncating the prompt if we can, since it
             # should have been managed by the prompt creator/few shot manager if requested by the user.
             inputs = tokenized["input_ids"]
-            context_size = len(inputs[0])
+            # context_size = len(inputs[0])
 
             # left truncate the inputs to the maximum length
-            if max_new_tokens is not None:
-                if context_size + max_new_tokens > self.max_length:
-                    logger.warning(
-                        f"{context_size + max_new_tokens=} which is greather than {self.max_length=}. Truncating context to {self.max_length - max_new_tokens} tokens."
-                    )
-                    context_size = self.max_length - max_new_tokens
-                    inputs = [input[-context_size:] for input in inputs]
-            else:
-                if context_size > self.max_length:
-                    logger.warning(
-                        f"{context_size=} which is greather than {self.max_length=}. Truncating context to {self.max_length} tokens."
-                    )
-                    context_size = self.max_length
-                    inputs = [input[-context_size:] for input in inputs]
+            # FIXME: this trunctation logic is causing alot of problems, lets
+            # forget it
+            # if max_new_tokens is not None:
+            #     if context_size + max_new_tokens > self.max_length:
+            #         logger.warning(
+            #             f"{context_size + max_new_tokens=} which is greather than {self.max_length=}. Truncating context to {self.max_length - max_new_tokens} tokens."
+            #         )
+            #         context_size = self.max_length - max_new_tokens
+            #         inputs = [input[-context_size:] for input in inputs]
+            # else:
+            #     if context_size > self.max_length:
+            #         logger.warning(
+            #             f"{context_size=} which is greather than {self.max_length=}. Truncating context to {self.max_length} tokens."
+            #         )
+            #         context_size = self.max_length
+            #         inputs = [input[-context_size:] for input in inputs]
 
             vllm_outputs = self._generate(
                 inputs=inputs,
@@ -316,8 +318,11 @@ class VLLMModel(LightevalModel):
         sampling_params = self.sampling_params.clone() or SamplingParams()
         if generate:
             sampling_params.n = num_samples
+            # FIXME: change this to take max_new_tokens as priority
+            # we do not handle the case if both max_new_tokens and
+            # sampling_params.max_tokens are both None
             sampling_params.max_tokens = (
-                max_new_tokens if sampling_params.max_tokens is None else sampling_params.max_tokens
+                max_new_tokens if max_new_tokens is not None else sampling_params.max_tokens
             )
             sampling_params.stop = stop_tokens
             sampling_params.logprobs = 1 if returns_logits else 0
